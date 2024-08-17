@@ -38,7 +38,7 @@ def get_declarations():
     )
     generate_controller_index = genai.protos.FunctionDeclaration(
         name='generate_controller_index',
-        description="Generates a controller index file which exports all the controllers. Only needs to be called once.",
+        description="Generates a controller index file which exports all the controllers. Only ever call this once.",
         parameters=genai.protos.Schema(
             type=genai.protos.Type.OBJECT,
             properties={
@@ -60,6 +60,19 @@ def get_declarations():
                 'controller_name':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
                     description="Name of the controller. Do not use the word 'controller' in the name. Should always be camel case. Should match the property `controller_names` in the `generate_controller_index` function."
+                ),
+                'services':genai.protos.Schema(
+                    type=genai.protos.Type.ARRAY,
+                    items=genai.protos.Schema(type=genai.protos.Type.STRING),
+                    description="List of services to import and call. Array of strings matching with the name of the service."
+                ),
+                'controller_path':genai.protos.Schema(
+                    type=genai.protos.Type.STRING,
+                    description="Path to the controllers directory. Default is 'src/controllers'."
+                ),
+                'method':genai.protos.Schema(
+                    type=genai.protos.Type.STRING,
+                    description="HTTP method of the controller. Default is GET."
                 )
             },
             required=['controller_name']
@@ -92,7 +105,7 @@ def get_declarations():
                 'service_names':genai.protos.Schema(
                     type=genai.protos.Type.ARRAY,
                     items=genai.protos.Schema(type=genai.protos.Type.STRING),
-                    description="List of service names to export."
+                    description="List of service names to export. Should be camel case."
                 ),
                 'service_path':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
@@ -110,12 +123,56 @@ def get_declarations():
             properties={
                 'service_name':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
-                    description="Name of the service."
+                    description="Name of the service. Should be camel case."
                 ),
                 'uri':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
-                    description="URI of the service."
+                    description="URI of the service. If the URI has parameters, use syntax like '${{param}}'."
                 ),
+                # "params":genai.protos.Schema(
+                #     type=genai.protos.Type.OBJECT,
+                #     properties={
+                #         "params":genai.protos.Schema(
+                #             type=genai.protos.Type.OBJECT,
+                #             properties={
+                #                 "name":genai.protos.Schema(
+                #                     type=genai.protos.Type.STRING,
+                #                     description="Name of the path parameter."
+                #                 ),
+                #                 "type":genai.protos.Schema(
+                #                     type=genai.protos.Type.STRING,
+                #                     description="Type of the path parameter."
+                #                 )
+                #             }
+                #         ),
+                #         "query":genai.protos.Schema(
+                #             type=genai.protos.Type.OBJECT,
+                #             properties={
+                #                 "name":genai.protos.Schema(
+                #                     type=genai.protos.Type.STRING,
+                #                     description="Name of the query parameter."
+                #                 ),
+                #                 "type":genai.protos.Schema(
+                #                     type=genai.protos.Type.STRING,
+                #                     description="Type of the query parameter."
+                #                 )
+                #             }
+                #         ),
+                #         "body":genai.protos.Schema(
+                #             type=genai.protos.Type.OBJECT,
+                #             properties={
+                #                 "name":genai.protos.Schema(
+                #                     type=genai.protos.Type.STRING,
+                #                     description="Name of the body parameter."
+                #                 ),
+                #                 "type":genai.protos.Schema(
+                #                     type=genai.protos.Type.STRING,
+                #                     description="Type of the body parameter."
+                #                 )
+                #             }
+                #         )
+                #     }
+                # ),
                 'service_path':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
                     description="Path to the services directory. Default is 'src/services'."
@@ -161,8 +218,10 @@ def execute_function(fn, args):
         generate_controller_index(controller_names, controller_path)
     elif fn.name == 'generate_controller':
         controller_path = args.get('controller_path', 'src/controllers')
+        services = args.get('services', [])
+        method = args.get('method', 'GET')
         controller_name = args.get('controller_name')
-        generate_controller(controller_name, controller_path)
+        generate_controller(controller_name, services, controller_path, method)
     elif fn.name == 'install_dependencies':
         project_name = args.get('project_name', 'node_api')
         install_dependencies(project_name)
@@ -205,18 +264,19 @@ def run(path="./test"):
         Then, generate the necessary files and code to build the API by running the
         available functions.
 
-        Rules:
-            - Always create the project folder first.
-            - Always install the necessary dependencies.
-            - Always create the entrypoint file before generating controllers.
-            - Always generate service index and controller index before generating individual services and controllers.
-            - Always generate services before controllers.
-            - Always generate a service for each endpoint found.
-            - Always generate a controller for each controller found unless directed to make specific controllers.
-            - Always format the code using prettier when all tasks are complete.
-
         Use the following context to generate the API:
             {context}
+
+        Order of Tasks:
+            - Create the project folder first.
+            - Install the necessary dependencies.
+            - Create the entrypoint file before generating controllers.
+            - Generate the service index. Only ever call this once.
+            - Generate the controller index. Only ever call this once.
+            - Generate a service for each endpoint found. This may include all endpoints in open api specs, json files, or other files.
+            - Generate a controller for each service found unless given specific instructions to generate specific routes/controllers.
+            - Always format the code using prettier when all tasks are complete.
+
         """
     response = chat.send_message(prompt)
 
@@ -228,8 +288,8 @@ def run(path="./test"):
             # Prompt the user if they want to execute the function.
             print(f"Function: {fn.name}")
             print("Arguments: ", fn.args)
-            is_execute = input(f"Execute? (y/n): ")
-            if is_execute != 'y':
-                continue
+            # is_execute = input(f"Execute? (y/n): ")
+            # if is_execute != 'y':
+            #     continue
                     
             execute_function(fn, fn.args)

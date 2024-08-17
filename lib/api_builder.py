@@ -87,18 +87,39 @@ def generate_controller_index(controller_names, controller_path='src/controllers
         f.write("export default router;")
     logger.info("Controller index file generated successfully.")
 
-def generate_controller(controller_name, controller_path='src/controllers'):
+def generate_controller(controller_name, services, controller_path='src/controllers', method='GET'):
     logger.info(f"Generating node controller file for {controller_name}.")
     os.makedirs(f'{controller_path}', exist_ok=True)
 
+    if not services or len(services) == 0:
+        logger.error("No services found. Please create services first.")
+        return
+
     with open(f'{controller_path}/{controller_name}.js', 'w') as f:
-        f.write("""
+        service_imports = []
+        for service in services:
+            service_imports.append(f"import {{ {service} }} from '../services/{service}/index.js';")
+
+        service_calls = []
+        for service_name in services:
+            service_calls.append(f"const {service_name}Data = await {service_name}();")
+            service_calls.append(f"finalData['{service_name}'] = {service_name}Data;")
+            service_calls.append("\n")
+            
+        f.write(f"""
                 import express from 'express';
                 const router = express.Router();
+                {"".join(service_imports)}
 
-                router.get('/', (req, res) => {
-                    res.send('Hello World!');
-                });
+                router.{method.lower()}('/', async (req, res) => {{
+                    try {{
+                        let finalData = {{}};
+                        {"".join(service_calls)}
+                        res.json(finalData);
+                    }} catch (error) {{
+                        res.status(500).json({{ error: error.message }});
+                    }}
+                }});
 
                 export default router;
         """)
