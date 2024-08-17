@@ -76,8 +76,12 @@ def generate_controller_index(controller_names, controller_path='src/controllers
 
         f.write("const router = express.Router();\n")
 
+        f.write("\n")
+
         for controller_name in controller_names:
-            f.write(f"router.use('/{controller_name}', {controller_name});\n")
+            # Convert from camel case to kebab case
+            route_name = ''.join(['-' + i.lower() if i.isupper() else i for i in controller_name]).lstrip('-')
+            f.write(f"router.use('/{route_name}', {controller_name});\n")
         f.write("\n")
 
         f.write("export default router;")

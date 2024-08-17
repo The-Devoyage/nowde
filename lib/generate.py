@@ -45,7 +45,7 @@ def get_declarations():
                 'controller_names':genai.protos.Schema(
                     type=genai.protos.Type.ARRAY,
                     items=genai.protos.Schema(type=genai.protos.Type.STRING),
-                    description="List of controller names to export."
+                    description="List of controller names to export. Do not use the word 'controller' in the name. Should be camel case."
                 )
             },
             required=['controller_names']
@@ -59,7 +59,7 @@ def get_declarations():
             properties={
                 'controller_name':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
-                    description="Name of the controller."
+                    description="Name of the controller. Do not use the word 'controller' in the name. Should always be camel case. Should match the property `controller_names` in the `generate_controller_index` function."
                 )
             },
             required=['controller_name']
@@ -211,6 +211,8 @@ def run(path="./test"):
             - Always create the entrypoint file before generating controllers.
             - Always generate service index and controller index before generating individual services and controllers.
             - Always generate services before controllers.
+            - Always generate a service for each endpoint found.
+            - Always generate a controller for each controller found unless directed to make specific controllers.
             - Always format the code using prettier when all tasks are complete.
 
         Use the following context to generate the API:
