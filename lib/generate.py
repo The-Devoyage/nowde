@@ -73,6 +73,10 @@ def get_declarations():
                 'method':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
                     description="HTTP method of the controller. Default is GET."
+                ),
+                "endpoint":genai.protos.Schema(
+                    type=genai.protos.Type.STRING,
+                    description="URL endpoint for the controller. Use NodeJS Express syntax for URL parameters - which is a slash and a colon to define url params. Use camel case for each param. Example: '/:id'. Example 2: '/:id/:name'. Example 3: '/:id/:name/:firstName'."
                 )
             },
             required=['controller_name']
@@ -127,52 +131,8 @@ def get_declarations():
                 ),
                 'uri':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
-                    description="URI of the service. If the URI has parameters, use syntax like '${{param}}'."
+                    description="URI of the service. If the URI/URL has parameters, use the following format to represent the parameter in javascript as a formatted string literal accessing the `params` variable. Ex: `${params.id}`. Example 2: `${params.firstName}`."
                 ),
-                # "params":genai.protos.Schema(
-                #     type=genai.protos.Type.OBJECT,
-                #     properties={
-                #         "params":genai.protos.Schema(
-                #             type=genai.protos.Type.OBJECT,
-                #             properties={
-                #                 "name":genai.protos.Schema(
-                #                     type=genai.protos.Type.STRING,
-                #                     description="Name of the path parameter."
-                #                 ),
-                #                 "type":genai.protos.Schema(
-                #                     type=genai.protos.Type.STRING,
-                #                     description="Type of the path parameter."
-                #                 )
-                #             }
-                #         ),
-                #         "query":genai.protos.Schema(
-                #             type=genai.protos.Type.OBJECT,
-                #             properties={
-                #                 "name":genai.protos.Schema(
-                #                     type=genai.protos.Type.STRING,
-                #                     description="Name of the query parameter."
-                #                 ),
-                #                 "type":genai.protos.Schema(
-                #                     type=genai.protos.Type.STRING,
-                #                     description="Type of the query parameter."
-                #                 )
-                #             }
-                #         ),
-                #         "body":genai.protos.Schema(
-                #             type=genai.protos.Type.OBJECT,
-                #             properties={
-                #                 "name":genai.protos.Schema(
-                #                     type=genai.protos.Type.STRING,
-                #                     description="Name of the body parameter."
-                #                 ),
-                #                 "type":genai.protos.Schema(
-                #                     type=genai.protos.Type.STRING,
-                #                     description="Type of the body parameter."
-                #                 )
-                #             }
-                #         )
-                #     }
-                # ),
                 'service_path':genai.protos.Schema(
                     type=genai.protos.Type.STRING,
                     description="Path to the services directory. Default is 'src/services'."
@@ -221,7 +181,8 @@ def execute_function(fn, args):
         services = args.get('services', [])
         method = args.get('method', 'GET')
         controller_name = args.get('controller_name')
-        generate_controller(controller_name, services, controller_path, method)
+        endpoint = args.get('endpoint', None)
+        generate_controller(controller_name, services, controller_path, method, endpoint)
     elif fn.name == 'install_dependencies':
         project_name = args.get('project_name', 'node_api')
         install_dependencies(project_name)
@@ -285,11 +246,4 @@ def run(path="./test"):
 
     for part in response.parts:
         if fn := part.function_call:
-            # Prompt the user if they want to execute the function.
-            print(f"Function: {fn.name}")
-            print("Arguments: ", fn.args)
-            # is_execute = input(f"Execute? (y/n): ")
-            # if is_execute != 'y':
-            #     continue
-                    
             execute_function(fn, fn.args)

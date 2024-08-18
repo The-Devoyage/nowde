@@ -87,7 +87,7 @@ def generate_controller_index(controller_names, controller_path='src/controllers
         f.write("export default router;")
     logger.info("Controller index file generated successfully.")
 
-def generate_controller(controller_name, services, controller_path='src/controllers', method='GET'):
+def generate_controller(controller_name, services, controller_path='src/controllers', method='GET', endpoint=None,):
     logger.info(f"Generating node controller file for {controller_name}.")
     os.makedirs(f'{controller_path}', exist_ok=True)
 
@@ -102,16 +102,19 @@ def generate_controller(controller_name, services, controller_path='src/controll
 
         service_calls = []
         for service_name in services:
-            service_calls.append(f"const {service_name}Data = await {service_name}();")
+            service_calls.append(f"const {service_name}Data = await {service_name}({{params, body, query}});")
             service_calls.append(f"finalData['{service_name}'] = {service_name}Data;")
             service_calls.append("\n")
+
+        dyn_endpoint = endpoint if endpoint else '/'
             
         f.write(f"""
                 import express from 'express';
                 const router = express.Router();
                 {"".join(service_imports)}
 
-                router.{method.lower()}('/', async (req, res) => {{
+                router.{method.lower()}('{dyn_endpoint}', async (req, res) => {{
+                    const {{ params, body, query }} = req;
                     try {{
                         let finalData = {{}};
                         {"".join(service_calls)}
@@ -146,13 +149,24 @@ def generate_service(service_name, uri, service_path='src/services', method='GET
 
     with open(f'{service_path}/{service_name}/index.js', 'w') as f:
         f.write(f"""
-                export const {service_name} = async () => {{
-                    const response = await fetch('{uri}', {{
-                        method: '{method}',
-                    }});
-                    return await response.json();
+                export const {service_name} = async ({{params, body, query}}) => {{
+                        const search_query_string = new URLSearchParams(query).toString();
+
+                        try {{
+                            const response = await fetch(`{uri}` + search_query_string, {{
+                                method: '{method}',
+                                headers: {{
+                                    'Content-Type': 'application/json'
+                                }},
+                                body: JSON.stringify(body)
+                            }});
+
+                            return await response.json();
+                        }} catch (error) {{
+                            console.error(error);
+                            return {{ error: error.message }};
+                        }}
                 }};
         """)
 
     logger.info("Node service file generated successfully.")
-
