@@ -45,7 +45,7 @@ def get_declarations():
                 'controller_names':genai.protos.Schema(
                     type=genai.protos.Type.ARRAY,
                     items=genai.protos.Schema(type=genai.protos.Type.STRING),
-                    description="List of controller names to export. Do not use the word 'controller' in the name. Should be camel case."
+                    description="List of controller names to export. Always name this based on the entity being resolved. Always use camel case."
                 )
             },
             required=['controller_names']
@@ -76,7 +76,7 @@ def get_declarations():
                 ),
                 "endpoint":genai.protos.Schema(
                     type=genai.protos.Type.STRING,
-                    description="URL endpoint for the controller. Use NodeJS Express syntax for URL parameters - which is a slash and a colon to define url params. Use camel case for each param. Example: '/:id'. Example 2: '/:id/:name'. Example 3: '/:id/:name/:firstName'."
+                    description="URL endpoint for the controller. Use NodeJS Express syntax for URL parameters - which is a slash and a colon to define url params. Use camel case for each param. Example: '/:id'. Example 2: '/:id/:name'. Example 3: '/:id/:name/:firstName'. Only include url params in this endpoint, as the parent controller path is already defined. Default is '/'."
                 )
             },
             required=['controller_name']

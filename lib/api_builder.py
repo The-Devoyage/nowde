@@ -81,6 +81,8 @@ def generate_controller_index(controller_names, controller_path='src/controllers
         for controller_name in controller_names:
             # Convert from camel case to kebab case
             route_name = ''.join(['-' + i.lower() if i.isupper() else i for i in controller_name]).lstrip('-')
+            # Remove "-controller" from the route name
+            route_name = route_name.replace('-controller', '')
             f.write(f"router.use('/{route_name}', {controller_name});\n")
         f.write("\n")
 
