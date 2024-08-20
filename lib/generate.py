@@ -207,7 +207,7 @@ def execute_function(fn, args):
 """
 Runs the application. This is the main function that is called to generate the API.
 """
-def run(path="./test"):
+def run(path):
     logger.info("Starting the application.")
     google_api_key = os.getenv('GOOGLE_API_KEY')
 
@@ -242,7 +242,7 @@ def run(path="./test"):
         """
     response = chat.send_message(prompt)
 
-    logger.info("Response received.")
+    logger.info("Model Response:")
     logger.info(response)
 
     for part in response.parts:

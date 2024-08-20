@@ -129,7 +129,6 @@ def generate_controller(controller_name, services, controller_path='src/controll
         with open(f'{controller_path}/{controller_name}.js', 'r') as f2:
             lines = f2.readlines()
         with open(f'{controller_path}/{controller_name}.js', 'w') as f2:
-            logger.info("Appending to existing controller file: ", lines[:-1])
             f2.writelines(lines[:-1])
             existing = lines[:-1]
 
