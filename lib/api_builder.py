@@ -1,6 +1,8 @@
 import os
 import logging
 import json
+import inflect
+from time import sleep
 
 logger = logging.getLogger(__name__)
 
@@ -78,24 +80,60 @@ def generate_controller_index(controller_names, controller_path='src/controllers
 
         f.write("\n")
 
+        unique_controller_names = []
+
         for controller_name in controller_names:
             # Convert from camel case to kebab case
             route_name = ''.join(['-' + i.lower() if i.isupper() else i for i in controller_name]).lstrip('-')
             # Remove "-controller" from the route name
             route_name = route_name.replace('-controller', '')
+            route_name = route_name.replace('get-', '')
+            unique_controller_names.append(route_name)
+
+        unique_singular_controller_names = []
+        p = inflect.engine()
+        for unique_name in unique_controller_names:
+            # make it singlur using inflect
+            singular_name = p.singular_noun(unique_name)
+
+            # if inflect is unable to find singular name, then use the unique name
+            if singular_name is False:
+                singular_name = unique_name
+
+            # if the singular name is unique, then use it
+            if singular_name not in unique_singular_controller_names:
+                logger.info(f"Unique name: {unique_name}, Singular name: {singular_name}")
+                unique_singular_controller_names.append(singular_name)
+
+        for controller_name, route_name in zip(controller_names, unique_singular_controller_names):
             f.write(f"router.use('/{route_name}', {controller_name});\n")
+
         f.write("\n")
 
         f.write("export default router;")
     logger.info("Controller index file generated successfully.")
 
-def generate_controller(controller_name, services, controller_path='src/controllers', method='GET', endpoint=None,):
+def generate_controller(controller_name, services, controller_path='src/controllers', method='GET', endpoint=None):
     logger.info(f"Generating node controller file for {controller_name}.")
     os.makedirs(f'{controller_path}', exist_ok=True)
 
     if not services or len(services) == 0:
         logger.error("No services found. Please create services first.")
         return
+
+    existing = ""
+
+    #  remove the export default from the original file, if it exists
+    controller_exists = os.path.exists(f'{controller_path}/{controller_name}.js')
+    if controller_exists:
+        with open(f'{controller_path}/{controller_name}.js', 'r') as f2:
+            lines = f2.readlines()
+        with open(f'{controller_path}/{controller_name}.js', 'w') as f2:
+            logger.info("Appending to existing controller file: ", lines[:-1])
+            f2.writelines(lines[:-1])
+            existing = lines[:-1]
+
+    sleep(1)
 
     with open(f'{controller_path}/{controller_name}.js', 'w') as f:
         service_imports = []
@@ -109,25 +147,34 @@ def generate_controller(controller_name, services, controller_path='src/controll
             service_calls.append("\n")
 
         dyn_endpoint = endpoint if endpoint else '/'
-            
-        f.write(f"""
+
+        if not controller_exists:
+            f.write(f"""
                 import express from 'express';
                 const router = express.Router();
                 {"".join(service_imports)}
 
-                router.{method.lower()}('{dyn_endpoint}', async (req, res) => {{
-                    const {{ params, body, query }} = req;
-                    try {{
-                        let finalData = {{}};
-                        {"".join(service_calls)}
-                        res.json(finalData);
-                    }} catch (error) {{
-                        res.status(500).json({{ error: error.message }});
-                    }}
-                }});
+            """)
+        else:
+            f.write("".join(service_imports))
+            f.writelines(existing)
 
-                export default router;
+        f.write(f"""
+
+            router.{method.lower()}('{dyn_endpoint}', async (req, res) => {{
+                const {{ params, body, query }} = req;
+                try {{
+                    let finalData = {{}};
+                    {"".join(service_calls)}
+                    res.json(finalData);
+                }} catch (error) {{
+                    res.status(500).json({{ error: error.message }});
+                }}
+            }});
+
         """)
+
+        f.write("export default router;")
 
     logger.info("Node controller file generated successfully.")
     

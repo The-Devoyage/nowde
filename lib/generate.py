@@ -53,7 +53,7 @@ def get_declarations():
     )
     generate_controller = genai.protos.FunctionDeclaration(
         name='generate_controller',
-        description="Generates a node controller file. Can be called multiple times to create multiple controllers.",
+        description="Generates a node controller file. Can be called multiple times to create multiple controllers. Append multiple routes to the same controller by calling this function with the same controller name repetitivly.",
         parameters=genai.protos.Schema(
             type=genai.protos.Type.OBJECT,
             properties={
@@ -76,8 +76,8 @@ def get_declarations():
                 ),
                 "endpoint":genai.protos.Schema(
                     type=genai.protos.Type.STRING,
-                    description="URL endpoint for the controller. Use NodeJS Express syntax for URL parameters - which is a slash and a colon to define url params. Use camel case for each param. Example: '/:id'. Example 2: '/:id/:name'. Example 3: '/:id/:name/:firstName'. Only include url params in this endpoint, as the parent controller path is already defined. Default is '/'."
-                )
+                    description="URL endpoint for the controller. Use NodeJS Express syntax for URL parameters - which is a slash and a colon to define url params. Use camel case for each param. Example: '/:id'. Example 2: '/:id/:name'. Example 3: '/:id/:name/:firstName'. Only include url params in this endpoint, as the parent controller path is already defined. Default is '/'. Should never include the name of the entity being resolved."
+                ),
             },
             required=['controller_name']
         )
@@ -235,7 +235,8 @@ def run(path="./test"):
             - Generate the service index. Only ever call this once.
             - Generate the controller index. Only ever call this once.
             - Generate a service for each endpoint found. This may include all endpoints in open api specs, json files, or other files.
-            - Generate a controller for each service found unless given specific instructions to generate specific routes/controllers.
+            - Generate a route/controller for each service function found.
+            - Always group similar routes together in the same controller by using the same controller name to construct the controller.
             - Always format the code using prettier when all tasks are complete.
 
         """
